@@ -10,6 +10,7 @@ interface Props {
   onSelectConfig: (fundId: string) => void
   onUpload: (file: File) => Promise<void>
   onSaveConfig: (config: FundConfig) => Promise<void>
+  onContinue: () => void
 }
 
 export function SetupPage(props: Props) {
@@ -89,6 +90,17 @@ export function SetupPage(props: Props) {
           <div><span>Schedule pages</span><strong>{props.result ? `${Math.min(...props.result.holdings.map((r) => r.source_page))}–${Math.max(...props.result.holdings.map((r) => r.source_page))}` : 'Detected during parse'}</strong></div>
         </div>
       </div>
+
+      {props.document && (
+        <div className="workflow-actions panel-wide" role="status">
+          <div>
+            <p className="eyebrow">Setup complete</p>
+            <strong>{props.document.original_filename} is ready</strong>
+            <p>Continue to run the selected configuration and extract holdings.</p>
+          </div>
+          <button className="button" onClick={props.onContinue}>Continue to Parse <span aria-hidden="true">→</span></button>
+        </div>
+      )}
 
       {editorOpen && (
         <div className="modal-backdrop" role="presentation">

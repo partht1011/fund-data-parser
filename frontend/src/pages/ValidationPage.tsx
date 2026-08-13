@@ -9,9 +9,11 @@ const REVIEW_RECORDS_PER_PAGE = 8
 interface Props {
   result: ParseResult | null
   onCorrect: (record: Holding, field: string, value: string, updateConfig: boolean) => Promise<void>
+  onBack: () => void
+  onContinue: () => void
 }
 
-export function ValidationPage({ result, onCorrect }: Props) {
+export function ValidationPage({ result, onCorrect, onBack, onContinue }: Props) {
   const review = useMemo(() => result?.holdings.filter((item) => item.validation_status === 'review') ?? [], [result])
   const [selected, setSelected] = useState<Holding | null>(null)
   const [field, setField] = useState('security_name')
@@ -74,6 +76,11 @@ export function ValidationPage({ result, onCorrect }: Props) {
           </div>
         </div>
       )}
+      <div className="workflow-actions panel-wide">
+        <button className="button secondary" onClick={onBack}>Back to Parse</button>
+        <div className="workflow-actions-copy"><span>Review items can be corrected now or exported with their current status.</span></div>
+        <button className="button" onClick={onContinue}>Continue to Output <span aria-hidden="true">→</span></button>
+      </div>
     </section>
   )
 }

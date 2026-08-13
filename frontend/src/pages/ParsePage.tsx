@@ -5,9 +5,11 @@ interface Props {
   document: DocumentInfo | null
   job: Job | null
   onStart: () => Promise<void>
+  onBack: () => void
+  onContinue: () => void
 }
 
-export function ParsePage({ document, job, onStart }: Props) {
+export function ParsePage({ document, job, onStart, onBack, onContinue }: Props) {
   const canStart = document && (!job || job.status === 'complete' || job.status === 'failed')
   return (
     <section className="page-stack">
@@ -30,6 +32,14 @@ export function ParsePage({ document, job, onStart }: Props) {
       </div>
       {job?.error_message && <div className="alert error">{job.error_message}</div>}
       {job && ['queued', 'processing'].includes(job.status) && <div className="progress"><span /></div>}
+      <div className="workflow-actions">
+        <button className="button secondary" onClick={onBack}>Back to Setup</button>
+        <div className="workflow-actions-copy">
+          {job?.status === 'complete' && <span>Parsing is complete. Continue to inspect validation results.</span>}
+          {job?.status === 'failed' && <span>Review the error above or return to Setup before retrying.</span>}
+        </div>
+        {job?.status === 'complete' && <button className="button" onClick={onContinue}>Continue to Validation <span aria-hidden="true">→</span></button>}
+      </div>
     </section>
   )
 }

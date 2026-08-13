@@ -12,7 +12,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .topbar p { margin-left: auto; font-size: 12px; color: #aaa; }
 .tabs { height: 58px; padding: 0 4vw; background: #fff; border-bottom: 1px solid #d4d4d0; display: flex; gap: 32px; }
 .tabs button { position: relative; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: #777; cursor: pointer; }
+.tabs button:disabled { color: #bbb; cursor: not-allowed; }
 .tabs button span { font: 11px/1 monospace; border: 1px solid #ccc; border-radius: 99px; width: 20px; height: 20px; display: grid; place-items: center; }
+.tabs button.completed:not(.active) { color: #444; }
+.tabs button.completed span { border-color: #777; }
 .tabs button.active { color: #111; font-weight: 650; }
 .tabs button.active::after { content: ''; position: absolute; height: 2px; background: #111; bottom: -1px; left: 0; right: 0; }
 main { width: min(1400px, 92vw); margin: 36px auto; flex: 1; }
@@ -41,6 +44,13 @@ select, input, textarea { width: 100%; border: 1px solid #bbb; background: #fff;
 .button.secondary { background: #fff; color: #111; }
 .button-light { background: #fff; color: #111; border-color: #fff; }
 .button-row { display: flex; gap: 10px; justify-content: flex-end; }
+.workflow-actions { background: #fff; border: 1px solid #cfcfca; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.workflow-actions > div:first-child:not(.workflow-actions-copy) { flex: 1; }
+.workflow-actions .eyebrow { margin-bottom: 6px; }
+.workflow-actions strong { display: block; font-size: 15px; }
+.workflow-actions p { color: #707070; font-size: 12px; margin: 5px 0 0; }
+.workflow-actions-copy { flex: 1; text-align: center; color: #777; font-size: 12px; line-height: 1.5; }
+.workflow-actions .button span { margin-left: 7px; }
 .preview-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #ddd; }
 .preview-row div { background: #fff; padding: 16px 18px; display: flex; flex-direction: column; gap: 5px; }
 .preview-row span { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
@@ -106,4 +116,4 @@ pre { overflow: auto; background: #171717; color: #ddd; padding: 20px; font: 11p
 .global-alert button { color: #fff; background: transparent; border: 0; cursor: pointer; }
 .empty-state { text-align: center; padding: 80px 30px; }
 footer { width: min(1400px, 92vw); margin: 10px auto 24px; padding-top: 16px; border-top: 1px solid #ccc; display: flex; justify-content: space-between; color: #888; font: 10px/1 monospace; text-transform: uppercase; }
-@media (max-width: 800px) { .topbar p { display: none; } .tabs { gap: 6px; justify-content: space-between; padding: 0 3vw; } .tabs button { gap: 4px; font-size: 12px; } main { width: 94vw; margin-top: 20px; } .page-grid, .correction { grid-template-columns: 1fr; } .panel-wide { grid-column: auto; } .metrics { grid-template-columns: repeat(2, 1fr); } .parse-hero, .output-heading { align-items: stretch; flex-direction: column; } .preview-row { grid-template-columns: 1fr; } .panel { padding: 20px; } .pagination { align-items: stretch; flex-direction: column; } .pagination-controls { justify-content: space-between; } .pagination-pages { overflow-x: auto; } }
+@media (max-width: 800px) { .topbar p { display: none; } .tabs { gap: 6px; justify-content: space-between; padding: 0 3vw; } .tabs button { gap: 4px; font-size: 12px; } main { width: 94vw; margin-top: 20px; } .page-grid, .correction { grid-template-columns: 1fr; } .panel-wide { grid-column: auto; } .metrics { grid-template-columns: repeat(2, 1fr); } .parse-hero, .output-heading, .workflow-actions { align-items: stretch; flex-direction: column; } .workflow-actions-copy { text-align: left; } .preview-row { grid-template-columns: 1fr; } .panel { padding: 20px; } .pagination { align-items: stretch; flex-direction: column; } .pagination-controls { justify-content: space-between; } .pagination-pages { overflow-x: auto; } }

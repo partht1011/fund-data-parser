@@ -6,7 +6,14 @@ import type { Job, ParseResult } from '../types'
 
 const HOLDINGS_PER_PAGE = 15
 
-export function OutputPage({ result, job }: { result: ParseResult | null; job: Job | null }) {
+interface Props {
+  result: ParseResult | null
+  job: Job | null
+  onBack: () => void
+  onNewImport: () => void
+}
+
+export function OutputPage({ result, job, onBack, onNewImport }: Props) {
   const [currentPage, setCurrentPage] = useState(1)
   const tableSection = useRef<HTMLDivElement>(null)
 
@@ -27,6 +34,11 @@ export function OutputPage({ result, job }: { result: ParseResult | null; job: J
         <Pagination currentPage={currentPage} totalItems={result.holdings.length} pageSize={HOLDINGS_PER_PAGE} onPageChange={(page) => { setCurrentPage(page); window.requestAnimationFrame(() => tableSection.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }} itemLabel="holdings" />
       </div>
       <details className="panel json-preview"><summary>JSON preview</summary><pre>{JSON.stringify({ ...result, holdings: result.holdings.slice(0, 10) }, null, 2)}</pre></details>
+      <div className="workflow-actions">
+        <button className="button secondary" onClick={onBack}>Back to Validation</button>
+        <div className="workflow-actions-copy"><span>Exports remain available above. Start another import when finished.</span></div>
+        <button className="button" onClick={onNewImport}>Set up another import</button>
+      </div>
     </section>
   )
 }
