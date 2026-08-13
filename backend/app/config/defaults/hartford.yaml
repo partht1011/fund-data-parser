@@ -1,0 +1,45 @@
+fund_id: hartford_balanced_income
+version: "1"
+display_name: The Hartford Balanced Income Fund
+fund_name_patterns:
+  - The Hartford Balanced Income Fund
+schedule_headings:
+  - Schedule of Investments
+stop_headings:
+  - The Hartford Checks and Balances Fund
+  - Statements of Assets and Liabilities
+  - Notes to Financial Statements
+holding_stop_headings:
+  - Futures Contracts Outstanding
+  - Foreign Currency Contracts Outstanding
+  - Fair Value Summary
+column_aliases:
+  security_name: [Security, Description, Issuer]
+  number_of_shares: [Shares]
+  principal_amount: [Principal Amount, Shares or Principal Amount]
+  market_value: [Market Value, Value]
+hierarchy:
+  first_level: security_type
+  second_level: sector
+  sector_source: null
+  carry_context_across_pages: true
+security_types:
+  Convertible Bonds: [Convertible Bond]
+  Corporate Bonds: [Corporate Bond]
+  Foreign Government Obligations: [Foreign Government Obligation]
+  Municipal Bonds: [Municipal Bond]
+  U.S. Government Securities: [US Government Securities]
+  Common Stocks: [Common Stock]
+  Preferred Stocks: [Preferred Stock]
+  Short-Term Investments: [Short Term Investments]
+rules:
+  allow_multiline_security_name: true
+  ignore_totals: true
+  ignore_footnotes: true
+  security_first: false
+  reconciliation_tolerance: "1"
+fallback:
+  enabled: true
+layout_hints:
+  columns: 2
+  split_ratio: 0.5

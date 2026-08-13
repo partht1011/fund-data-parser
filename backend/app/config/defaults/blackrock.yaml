@@ -1,0 +1,36 @@
+fund_id: blackrock_international
+version: "1"
+display_name: BlackRock International Fund
+fund_name_patterns:
+  - BlackRock International Fund
+schedule_headings:
+  - Schedule of Investments
+  - Schedule of Investments (unaudited)
+holding_stop_headings:
+  - Affiliates
+  - Fair Value Hierarchy
+column_aliases:
+  security_name: [Security, Description, Issuer]
+  number_of_shares: [Shares, Quantity]
+  principal_amount: [Principal Amount, Shares or Principal Amount]
+  market_value: [Value, Market Value, Fair Value]
+hierarchy:
+  first_level: security_type
+  second_level: country
+  sector_source: null
+  carry_context_across_pages: true
+security_types:
+  Common Stocks: [Common Stock]
+  Short-Term Securities: [Short Term Securities]
+  Money Market Funds: [Money Market Fund]
+rules:
+  allow_multiline_security_name: true
+  ignore_totals: true
+  ignore_footnotes: true
+  security_first: true
+  reconciliation_tolerance: "1"
+fallback:
+  enabled: true
+layout_hints:
+  columns: 2
+  split_ratio: 0.5

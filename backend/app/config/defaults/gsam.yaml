@@ -1,0 +1,34 @@
+fund_id: gsam_international_equity_income
+version: "1"
+display_name: Goldman Sachs International Equity Income Fund
+fund_name_patterns:
+  - GOLDMAN SACHS INTERNATIONAL EQUITY INCOME FUND
+schedule_headings:
+  - Schedule of Investments
+holding_stop_headings:
+  - The following is a summary
+  - Sector Name Value
+column_aliases:
+  security_name: [Description, Security]
+  number_of_shares: [Shares, Quantity]
+  principal_amount: [Principal Amount]
+  market_value: [Value, Market Value]
+hierarchy:
+  first_level: security_type
+  second_level: country
+  sector_source: description
+  carry_context_across_pages: true
+security_types:
+  Common Stocks: [Common Stock]
+  Short-Term Investments: [Short Term Investments]
+rules:
+  allow_multiline_security_name: true
+  ignore_totals: true
+  ignore_footnotes: true
+  security_first: false
+  reconciliation_tolerance: "1"
+fallback:
+  enabled: true
+layout_hints:
+  columns: 2
+  split_ratio: 0.5
