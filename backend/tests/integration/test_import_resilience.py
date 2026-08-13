@@ -89,6 +89,7 @@ def test_remote_failure_preserves_local_records_and_completes_for_review(
     assert remote.calls == [[1]]
     holding = session.scalars(select(HoldingRow)).one()
     assert holding.security_name == "Teck Resources Ltd., Class B"
-    assert holding.validation_status == "review"
+    # An unresolved fragment is page-scoped; it must not contaminate a valid record.
+    assert holding.validation_status == "pass"
     validation_codes = set(session.scalars(select(ValidationRow.code)).all())
     assert {"holding_row_incomplete", "remote_fallback_failed"} <= validation_codes

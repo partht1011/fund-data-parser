@@ -147,7 +147,7 @@ class ImportService:
                         page_number=schedule.start_page,
                     )
                 )
-            self._mark_failed_pages_for_review(extraction.holdings, validations)
+            self._mark_failed_records_for_review(extraction.holdings, validations)
             self._persist(job, config, schedule, extraction.holdings, validations, remote_pages)
             logger.info(
                 "import completed",
@@ -266,16 +266,16 @@ class ImportService:
         return pages or fallback[:1]
 
     @staticmethod
-    def _mark_failed_pages_for_review(
+    def _mark_failed_records_for_review(
         holdings: list[HoldingRecord], validations: list[ValidationResult]
     ) -> None:
-        failed_pages = {
-            validation.page_number
+        failed_security_names = {
+            validation.section_name
             for validation in validations
-            if validation.severity == "error" and validation.page_number is not None
+            if validation.severity == "error" and validation.section_name
         }
         for holding in holdings:
-            if holding.source_page in failed_pages:
+            if holding.security_name in failed_security_names:
                 holding.validation_status = ValidationStatus.REVIEW
 
     @staticmethod

@@ -32,6 +32,7 @@ security_types:
   Common Stocks: [Common Stock]
   Preferred Stocks: [Preferred Stock]
   Short-Term Investments: [Short Term Investments]
+  Senior Floating Rate Interests: [Senior Floating Rate Interest]
 rules:
   allow_multiline_security_name: true
   ignore_totals: true

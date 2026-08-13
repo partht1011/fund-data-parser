@@ -4,6 +4,7 @@ from app.config.schema import FundConfig
 
 PERCENT_HEADING = re.compile(
     r"^(?P<label>.+?)\s*(?:—|–|-)\s*[\d.]+%"
+    r"(?:\s*\(\d+\))*"
     r"(?:\s*(?:—|–|-)?\s*\(?continued\)?)?\s*$",
     re.IGNORECASE,
 )
@@ -34,18 +35,19 @@ def is_noise(text: str, config: FundConfig) -> bool:
     lower = value.lower()
     if not value:
         return True
-    if "the accompanying notes" in lower or "percentage shown" in lower:
+    if (
+        "the accompanying notes" in lower
+        or "percentage shown" in lower
+        or lower in {"statements.", "financial statements."}
+    ):
         return True
     if lower in {"shares", "value", "market value", "security", "description"}:
         return True
-    aliases: list[str] = [
-        *config.column_aliases.security_name,
-        *config.column_aliases.number_of_shares,
-        *config.column_aliases.principal_amount,
-        *config.column_aliases.market_value,
-    ]
-    if all(compact(alias) in compact(value) for alias in aliases[:1]) and (
-        "value" in lower or "shares" in lower or "principal" in lower
+    alias_matches = match_header_alias(value, config)
+    if len(alias_matches) >= 2 or (
+        alias_matches
+        and ("value" in lower or "shares" in lower or "principal" in lower)
+        and not re.search(r"\d", value)
     ):
         return True
     return bool(re.fullmatch(r"\d{1,3}", value))
@@ -55,7 +57,7 @@ def is_total(text: str) -> bool:
     lower = text.strip().lower()
     compacted = compact(lower)
     fuzzy_total = bool(re.match(r"^(?:sub)?to+t+a+l", compacted))
-    cost_line = bool(re.match(r"^\(?cost(?:\s|[$€£])", lower))
+    cost_line = bool(re.match(r"^\(?cost\s*:?(?:\s|[$€£])", lower))
     return cost_line or fuzzy_total or lower.startswith(("net assets", "other assets less"))
 
 

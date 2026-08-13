@@ -3,8 +3,11 @@ from decimal import Decimal, InvalidOperation
 
 import pycountry
 
-_CURRENCY = re.compile(r"(?:USD|EUR|GBP|[$€£])", re.IGNORECASE)
+_CURRENCY_PREFIX = re.compile(r"^(?P<currency>[A-Z]{3}|[$€£])\s*")
 _NULL_NUMBERS = {"", "-", "--", "—", "–"}
+ISO_CURRENCY_PATTERN = "(?:[$€£]|" + "|".join(
+    sorted(currency.alpha_3 for currency in pycountry.currencies)
+) + ")"
 
 DEFAULT_COUNTRY_ALIASES = {
     "south korea": "KOR",
@@ -29,10 +32,11 @@ def parse_decimal(value: str | None) -> Decimal | None:
     )
     if cleaned in _NULL_NUMBERS:
         return None
-    cleaned = _CURRENCY.sub("", cleaned).strip()
+    cleaned = _strip_currency_prefix(cleaned)
     negative = cleaned.startswith("(") and cleaned.endswith(")")
     if negative:
         cleaned = cleaned[1:-1].strip()
+        cleaned = _strip_currency_prefix(cleaned)
     elif cleaned.endswith("-"):
         negative = True
         cleaned = cleaned[:-1].strip()
@@ -44,6 +48,16 @@ def parse_decimal(value: str | None) -> Decimal | None:
     except InvalidOperation as exc:
         raise ValueError(f"invalid numeric value: {value}") from exc
     return -number if negative else number
+
+
+def _strip_currency_prefix(value: str) -> str:
+    match = _CURRENCY_PREFIX.match(value)
+    if match is None:
+        return value.strip()
+    currency = match.group("currency")
+    if currency.isalpha() and pycountry.currencies.get(alpha_3=currency) is None:
+        return value.strip()
+    return value[match.end() :].strip()
 
 
 def normalize_country(name: str | None, aliases: dict[str, str] | None = None) -> str | None:

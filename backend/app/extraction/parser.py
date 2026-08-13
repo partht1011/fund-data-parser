@@ -9,6 +9,7 @@ from app.domain.enums import ParserSource, ValidationStatus
 from app.domain.models import HoldingRecord, ScheduleRange
 from app.extraction.context import ParseContext
 from app.extraction.field_normalizer import (
+    ISO_CURRENCY_PATTERN,
     extract_sector,
     normalize_country,
     normalize_security_name,
@@ -22,7 +23,7 @@ from app.extraction.row_classifier import (
     section_heading,
 )
 
-CURRENCY = r"(?:[$€£]|USD|EUR|GBP)"
+CURRENCY = ISO_CURRENCY_PATTERN
 NUMBER_CORE = r"(?:\d{1,3}(?:[,\u00a0\u202f ]\d{3})+|\d+)(?:\.\d+)?"
 NUMBER_ATOM = rf"(?:{CURRENCY}\s*)?[+-]?\s*{NUMBER_CORE}"
 NUMBER = rf"(?:(?:{CURRENCY}\s*)?\(\s*{NUMBER_ATOM}\s*\)|{NUMBER_ATOM}-?)"
@@ -61,6 +62,8 @@ class ExtractionIssue:
 class PendingRow:
     text: str
     block: PageBlock
+    description_prefix: bool = False
+    line_count: int = 1
 
 
 class HoldingParser:
@@ -76,6 +79,7 @@ class HoldingParser:
         context = ParseContext()
         output = ExtractionResult()
         pending: PendingRow | None = None
+        total_continuation = False
         selected = [page for page in pages if schedule.start_page <= page.page_number <= schedule.end_page]
         for page in selected:
             page_parser_source = (
@@ -87,6 +91,8 @@ class HoldingParser:
                 context = ParseContext()
             for block in page.blocks:
                 text = re.sub(r"\s+", " ", block.text).strip()
+                if block.block_type == "header":
+                    continue
                 compact_text = re.sub(r"[^a-z0-9]", "", text.lower())
                 if any(
                     re.sub(r"[^a-z0-9]", "", heading.lower()) in compact_text
@@ -96,8 +102,13 @@ class HoldingParser:
                     return output
                 if self._is_document_chrome(text, config) or is_noise(text, config):
                     continue
+                if total_continuation:
+                    total_continuation = False
+                    if not re.search(r"\d", text) and len(text) <= 50:
+                        continue
                 security_type = match_security_type(text, config)
                 if security_type:
+                    total_continuation = False
                     repeated_context = security_type == context.security_type and "continued" in text.lower()
                     context.security_type = security_type
                     if not repeated_context:
@@ -107,38 +118,70 @@ class HoldingParser:
                     continue
                 heading = section_heading(text)
                 if heading:
+                    current_second_level = (
+                        context.country_iso3
+                        if config.hierarchy.second_level == "country"
+                        else context.sector
+                    )
+                    normalized_heading = (
+                        normalize_country(heading, config.country_aliases)
+                        if config.hierarchy.second_level == "country"
+                        else heading
+                    )
+                    repeated_context = (
+                        normalized_heading == current_second_level
+                        and "continued" in text.lower()
+                    )
                     if config.hierarchy.second_level == "country":
-                        context.country_iso3 = normalize_country(heading, config.country_aliases)
+                        context.country_iso3 = normalized_heading
                         context.sector = None
                     else:
-                        context.sector = heading
+                        context.sector = normalized_heading
                         context.country_iso3 = None
-                    context.current_issuer = None
-                    self._report_unfinished_row(pending, output)
-                    pending = None
+                    if not repeated_context:
+                        context.current_issuer = None
+                        self._report_unfinished_row(pending, output)
+                        pending = None
                     continue
                 if is_total(text):
                     self._capture_total(text, context, output)
                     self._report_unfinished_row(pending, output)
                     pending = None
+                    total_continuation = not bool(re.search(r"\d", text))
                     continue
                 if config.rules.ignore_footnotes and is_footnote(text):
                     continue
-                if not re.search(r"[A-Za-z]", text) and not context.current_issuer:
-                    continue
+                if not re.search(r"[A-Za-z]", text) and not pending:
+                    complete_numeric_terms = self._match_row(
+                        text, config, bool(context.current_issuer)
+                    )
+                    if complete_numeric_terms is None:
+                        continue
 
-                combined = f"{pending.text} {text}" if pending else text
-                source_block = pending.block if pending else block
-                matched = None
-                if pending and self._looks_like_row_start(text):
-                    standalone = self._match_row(text, config, bool(context.current_issuer))
-                    if standalone:
+                standalone = self._match_row(
+                    text,
+                    config,
+                    bool(
+                        context.current_issuer
+                        or (pending and pending.description_prefix)
+                    ),
+                )
+                matched = standalone
+                name_prefix: str | None = None
+                source_block = block
+                if pending:
+                    source_block = pending.block
+                    if standalone and pending.description_prefix:
+                        name_prefix = pending.text
+                    elif standalone and self._looks_like_row_start(text):
                         self._report_unfinished_row(pending, output)
                         pending = None
-                        matched = standalone
                         source_block = block
-                if matched is None:
-                    matched = self._match_row(combined, config, bool(context.current_issuer))
+                    else:
+                        combined = f"{pending.text} {text}"
+                        matched = self._match_row(
+                            combined, config, bool(context.current_issuer)
+                        )
                 if matched:
                     try:
                         record = self._to_record(
@@ -149,6 +192,7 @@ class HoldingParser:
                             context,
                             page_parser_source,
                             output,
+                            name_prefix,
                         )
                     except Exception as exc:
                         output.issues.append(
@@ -168,10 +212,20 @@ class HoldingParser:
                     pending = None
                     continue
 
-                if self._looks_like_row_start(text):
+                if pending and config.rules.allow_multiline_security_name:
+                    pending.text = f"{pending.text} {text}"
+                    pending.line_count += 1
+                    if pending.line_count > 8 or len(pending.text) > 700:
+                        self._report_unfinished_row(pending, output)
+                        pending = None
+                elif self._is_debt_security(context.security_type):
+                    pending = PendingRow(
+                        text=text,
+                        block=block,
+                        description_prefix=True,
+                    )
+                elif self._looks_like_row_start(text):
                     pending = PendingRow(text=text, block=block)
-                elif pending and config.rules.allow_multiline_security_name:
-                    pending.text = combined
                 elif self._looks_like_issuer(text):
                     context.current_issuer = normalize_security_name(text)
         self._report_unfinished_row(pending, output)
@@ -231,12 +285,15 @@ class HoldingParser:
         context: ParseContext,
         parser_source: ParserSource,
         output: ExtractionResult,
+        name_prefix: str | None = None,
     ) -> HoldingRecord | None:
         name = normalize_security_name(match.group("name"))
+        if name_prefix:
+            name = normalize_security_name(f"{name_prefix} {name}")
         if is_total(name):
             return None
         if context.current_issuer and self._starts_with_terms(name):
-            name = f"{context.current_issuer} {name}"
+            name = self._join_issuer(context.current_issuer, name)
         sector = context.sector
         if config.hierarchy.sector_source == "description":
             name, embedded_sector = extract_sector(name)
@@ -304,8 +361,33 @@ class HoldingParser:
         return None, None, amount is not None
 
     @staticmethod
+    def _is_debt_security(security_type: str | None) -> bool:
+        lower = (security_type or "").lower()
+        return any(marker in lower for marker in DEBT_MARKERS)
+
+    @staticmethod
     def _starts_with_terms(name: str) -> bool:
-        return bool(re.match(r"^(?:\d+(?:\.\d+)?%|\d{2}/\d{2}/\d{4}|due\b)", name, re.IGNORECASE))
+        return bool(
+            re.match(
+                r"^(?:\d+(?:\.\d+)?%|\d{2}/\d{2}/\d{4}|due\b|thereafter\b|"
+                r"(?:term\s+)?sofr\b|(?:\d+\s+(?:mo\.|yr\.)\s+)?(?:usd\s+)?cmt\b|"
+                r"euribor\b|sonia\b|bonds?\b|notes?\b|debentures?\b|shares?\b|"
+                r"ltd\.?\b|inc\.?\b)",
+                name,
+                re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
+    def _join_issuer(issuer: str, terms: str) -> str:
+        issuer_words = issuer.split()
+        term_words = terms.split()
+        if issuer_words and term_words:
+            issuer_tail = re.sub(r"[^a-z]", "", issuer_words[-1].lower()).rstrip("s")
+            term_head = re.sub(r"[^a-z]", "", term_words[0].lower()).rstrip("s")
+            if issuer_tail and issuer_tail == term_head:
+                terms = " ".join(term_words[1:])
+        return normalize_security_name(f"{issuer} {terms}")
 
     @staticmethod
     def _looks_like_row_start(text: str) -> bool:

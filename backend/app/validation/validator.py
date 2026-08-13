@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 import pycountry
@@ -54,6 +55,20 @@ class Validator:
         if not record.security_name or is_total(record.security_name):
             record.validation_status = ValidationStatus.REVIEW
             results.append(Validator._error("invalid_security_name", "Record has an invalid security name", record.source_page))
+        elif Validator._looks_like_security_fragment(record.security_name):
+            record.validation_status = ValidationStatus.REVIEW
+            results.append(
+                ValidationResult(
+                    code="security_name_fragment",
+                    severity=Severity.ERROR,
+                    message=(
+                        f"Security name appears to be an unassembled row fragment: "
+                        f"{record.security_name}"
+                    ),
+                    page_number=record.source_page,
+                    section_name=record.security_name,
+                )
+            )
         if record.country_iso3 and pycountry.countries.get(alpha_3=record.country_iso3) is None:
             record.validation_status = ValidationStatus.REVIEW
             results.append(Validator._error("invalid_country", f"Invalid ISO3 code {record.country_iso3}", record.source_page))
@@ -71,6 +86,17 @@ class Validator:
     @staticmethod
     def _error(code: str, message: str, page: int | None = None) -> ValidationResult:
         return ValidationResult(code=code, severity=Severity.ERROR, message=message, page_number=page)
+
+    @staticmethod
+    def _looks_like_security_fragment(name: str) -> bool:
+        return bool(
+            re.match(
+                r"^(?:thereafter\b|(?:term\s+)?sofr\b|(?:\d+\s+(?:mo\.|yr\.)\s+)?"
+                r"(?:usd\s+)?cmt\b|euribor\b|sonia\b|shares?\s*,)",
+                name.strip(),
+                re.IGNORECASE,
+            )
+        )
 
 
 def should_use_remote(validations: list[ValidationResult]) -> bool:
